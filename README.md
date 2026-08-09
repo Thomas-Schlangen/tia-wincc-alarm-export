@@ -46,7 +46,7 @@ Sub CopyAlarmsUsb()
 Dim oFSO, i, sNummer, sQuelle, sZiel
 Dim bIsPanel
 
-bIsPanel = True
+bIsPanel = False
 
 Set oFSO = CreateObject("Scripting.FileSystemObject")
 
