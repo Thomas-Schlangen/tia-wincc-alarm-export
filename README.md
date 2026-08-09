@@ -46,7 +46,7 @@ Sub CopyAlarmsUsb()
 Dim oFSO, i, sNummer, sQuelle, sZiel
 Dim bIsPanel
 
-bIsPanel = False
+bIsPanel = True
 
 Set oFSO = CreateObject("Scripting.FileSystemObject")
 
@@ -56,8 +56,8 @@ For i = 0 To 10
 	    
 	If bIsPanel Then
 		
-		sQuelle = "\Storage Card SD\Stoerarchiv" & i & ".RDB"
-    	sZiel = "\Storage Card USB\Stoerarchiv" & i & ".RDB"
+		sQuelle = "\Storage Card SD\Stoerarchiv" & i & ".rdb"
+    	sZiel = "\Storage Card USB\Stoerarchiv" & i & ".rdb"
     
 	Else
 		
@@ -111,6 +111,8 @@ Es öffnet sich eine GUI: Eingabeordner mit `.rdb`-Dateien wählen (z.B. den
 per `CopyAlarmsUsb` befüllten USB-Stick/Backup-Ordner), Ausgabepfad
 bestätigen oder ändern (Default: `output/alarms.csv`), Export starten.
 
+![Programmfenster](resources/ProgrammFenster.png)
+
 ### Datenformat
 
 Jede `.rdb`-Datei enthält eine Tabelle `logdata` mit den Spalten `Time_ms,
@@ -141,3 +143,11 @@ da die OLE-Epoche fest ist und nicht kalibriert werden muss.
 ```
 pytest
 ```
+
+## 4. Offene Punkte
+
+- Bisher nur mit einer **Windows-Runtime** (WinCC Advanced Runtime auf PC)
+  getestet, inklusive Erzeugung der `.rdb`-Testdateien und Ende-zu-Ende-Test
+  des Python-Exports.
+- Ein **Test mit einem echten Siemens-Panel** (`bIsPanel = True`, Kopieren
+  SD-Karte → USB-Stick) steht noch aus.
