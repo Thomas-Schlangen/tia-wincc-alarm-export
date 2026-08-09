@@ -7,14 +7,12 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Time_ms ist kein Unix-Timestamp und kein Windows-FILETIME, sondern
-# Millisekunden seit einer gerätespezifischen Epoche, die beim ersten Start
-# des Panels gesetzt wird und nicht vorhersagbar ist. EPOCH wurde für das
-# Testpanel dieses Projekts anhand eines bekannten Referenzpunkts kalibriert
-# (Time_ms 46243611628.69 -> 09.08.2026 14:44:32) und gilt NUR für dieses
-# Panel. Bei einem anderen Panel oder nach dessen Neuinitialisierung muss
-# EPOCH neu kalibriert werden.
-EPOCH = datetime(2025, 2, 20, 9, 17, 40, 371308)
+# Time_ms ist kein Unix-Timestamp und kein Windows-FILETIME, sondern ein
+# OLE Automation Date (Tage seit 30.12.1899, Nachkommastellen = Tagesbruchteil
+# für die Uhrzeit), skaliert mit 1.000.000 (laut Siemens Dok-ID 109747174).
+# WinCC Advanced speichert in Lokalzeit des Panels, keine UTC-Konvertierung
+# nötig. Wichtig: Epoche ist der 30.12.1899, nicht der 31.12.1899.
+OLE_EPOCH = datetime(1899, 12, 30)
 
 COLUMNS: tuple[str, ...] = (
     "Time_ms",
@@ -43,8 +41,14 @@ class SchemaError(Exception):
 
 
 def timestamp_to_datetime(time_ms: float) -> datetime:
-    """Konvertiert einen Time_ms-Rohwert in ein datetime-Objekt, bezogen auf EPOCH."""
-    return EPOCH + timedelta(milliseconds=time_ms)
+    """Konvertiert einen Time_ms-Rohwert (OLE Automation Date * 1.000.000) in datetime.
+
+    Verifiziert gegen echte Paneldaten:
+    - time_ms 46243611628.69 -> 09.08.2026 14:40:44
+    - time_ms 46243561204.19 -> 09.08.2026 13:28:08
+    """
+    ole_date = time_ms / 1_000_000
+    return OLE_EPOCH + timedelta(days=ole_date)
 
 
 def find_rdb_files(folder: Path) -> list[Path]:

@@ -134,12 +134,16 @@ def test_merge_and_sort_handles_empty_lists() -> None:
     assert [row[0] for row in result] == [50.0]
 
 
-def test_timestamp_to_datetime_matches_verified_reference_point() -> None:
-    # Verifiziert gegen echte Paneldaten: time_ms 46243611628.69 -> 09.08.2026 14:44:32
-    # (Toleranz < 1s wegen Float-Rundung bei der Millisekunden-Umrechnung)
-    result = core.timestamp_to_datetime(46243611628.69)
-
-    assert abs(result - datetime(2026, 8, 9, 14, 44, 32)) < timedelta(seconds=1)
+def test_timestamp_to_datetime_matches_verified_reference_points() -> None:
+    # Verifiziert gegen echte Paneldaten (Siemens Dok-ID 109747174,
+    # OLE Automation Date * 1.000.000). Toleranz < 1s wegen Float-Rundung.
+    cases = [
+        (46243611628.69, datetime(2026, 8, 9, 14, 40, 44)),
+        (46243561204.19, datetime(2026, 8, 9, 13, 28, 8)),
+    ]
+    for time_ms, expected in cases:
+        result = core.timestamp_to_datetime(time_ms)
+        assert abs(result - expected) < timedelta(seconds=1)
 
 
 def test_write_csv_utf8_sig_and_umlauts(tmp_path: Path) -> None:
@@ -170,7 +174,7 @@ def test_write_csv_adds_computed_timestamp_column(tmp_path: Path) -> None:
 
     timestamp_value = data_row[core.CSV_COLUMNS.index("Timestamp")]
     parsed = datetime.fromisoformat(timestamp_value)
-    assert abs(parsed - datetime(2026, 8, 9, 14, 44, 32)) < timedelta(seconds=1)
+    assert abs(parsed - datetime(2026, 8, 9, 14, 40, 44)) < timedelta(seconds=1)
 
 
 def test_export_end_to_end_multiple_files(tmp_path: Path) -> None:

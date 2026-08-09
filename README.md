@@ -39,19 +39,20 @@ Excel Umlaute korrekt anzeigt.
 
 ### Zeitstempel (Time_ms / Timestamp)
 
-`Time_ms` ist kein Unix-Timestamp und kein Windows-FILETIME, sondern
-Millisekunden seit einer **gerätespezifischen Epoche**, die beim ersten Start
-des Panels gesetzt wird und nicht vorhersagbar ist. `Time_ms` bleibt
-unverändert als Rohwert in der CSV erhalten (u.a. als Sortierschlüssel für
-die chronologische Reihenfolge) und wird zusätzlich um eine berechnete Spalte
-`Timestamp` (lesbares Datum) ergänzt.
+`Time_ms` ist kein Unix-Timestamp und kein Windows-FILETIME, sondern ein
+**OLE Automation Date, skaliert mit 1.000.000** (laut Siemens Dok-ID
+109747174): Ganzzahlteil von `Time_ms / 1.000.000` = Tage seit der
+OLE-Epoche 30.12.1899, Nachkommastellen = Tagesbruchteil (Uhrzeit). WinCC
+Advanced speichert in Lokalzeit des Panels, es ist keine UTC-Konvertierung
+nötig. `Time_ms` bleibt unverändert als Rohwert in der CSV erhalten (u.a.
+als Sortierschlüssel für die chronologische Reihenfolge) und wird
+zusätzlich um eine berechnete Spalte `Timestamp` (lesbares Datum) ergänzt.
 
-Die Epoche ist in `core.EPOCH` fest kodiert und wurde für das Testpanel
-dieses Projekts anhand eines bekannten Referenzpunkts kalibriert
-(`Time_ms 46243611628.69` → `09.08.2026 14:44:32`). **Diese Epoche gilt nur
-für dieses Panel.** Bei einem anderen Panel oder nach dessen
-Neuinitialisierung ändert sie sich und `core.EPOCH` muss neu kalibriert
-werden (z.B. anhand eines Ereignisses mit bekanntem Zeitpunkt).
+Die Umrechnung (`core.timestamp_to_datetime`) ist gegen echte Paneldaten
+verifiziert (`Time_ms 46243611628.69` → `09.08.2026 14:40:44`,
+`Time_ms 46243561204.19` → `09.08.2026 13:28:08` — deckt sich exakt mit den
+Datei-Zeitstempeln der zugehörigen `.rdb`-Backups) und ist panelunabhängig,
+da die OLE-Epoche fest ist und nicht kalibriert werden muss.
 
 ## Tests
 
