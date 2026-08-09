@@ -9,6 +9,7 @@ venv/
 
 # Projektspezifisch
 output/
+outputs/
 
 # Tooling
 .pytest_cache/
