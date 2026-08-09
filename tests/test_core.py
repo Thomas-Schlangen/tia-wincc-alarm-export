@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -133,6 +134,14 @@ def test_merge_and_sort_handles_empty_lists() -> None:
     assert [row[0] for row in result] == [50.0]
 
 
+def test_timestamp_to_datetime_matches_verified_reference_point() -> None:
+    # Verifiziert gegen echte Paneldaten: time_ms 46243611628.69 -> 09.08.2026 14:44:32
+    # (Toleranz < 1s wegen Float-Rundung bei der Millisekunden-Umrechnung)
+    result = core.timestamp_to_datetime(46243611628.69)
+
+    assert abs(result - datetime(2026, 8, 9, 14, 44, 32)) < timedelta(seconds=1)
+
+
 def test_write_csv_utf8_sig_and_umlauts(tmp_path: Path) -> None:
     output_path = tmp_path / "out.csv"
     rows = [_row(1.0, msg_text="License Key nicht verfügbar!")]
@@ -144,8 +153,24 @@ def test_write_csv_utf8_sig_and_umlauts(tmp_path: Path) -> None:
         header = next(reader)
         data_row = next(reader)
 
-    assert tuple(header) == core.COLUMNS
+    assert tuple(header) == core.CSV_COLUMNS
     assert "verfügbar" in data_row[core.COLUMNS.index("MsgText")]
+
+
+def test_write_csv_adds_computed_timestamp_column(tmp_path: Path) -> None:
+    output_path = tmp_path / "out.csv"
+    rows = [_row(46243611628.69)]
+
+    core.write_csv(rows, output_path)
+
+    with output_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f)
+        next(reader)  # header
+        data_row = next(reader)
+
+    timestamp_value = data_row[core.CSV_COLUMNS.index("Timestamp")]
+    parsed = datetime.fromisoformat(timestamp_value)
+    assert abs(parsed - datetime(2026, 8, 9, 14, 44, 32)) < timedelta(seconds=1)
 
 
 def test_export_end_to_end_multiple_files(tmp_path: Path) -> None:

@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import csv
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
+
+# Time_ms ist kein Unix-Timestamp und kein Windows-FILETIME, sondern
+# Millisekunden seit einer gerätespezifischen Epoche, die beim ersten Start
+# des Panels gesetzt wird und nicht vorhersagbar ist. EPOCH wurde für das
+# Testpanel dieses Projekts anhand eines bekannten Referenzpunkts kalibriert
+# (Time_ms 46243611628.69 -> 09.08.2026 14:44:32) und gilt NUR für dieses
+# Panel. Bei einem anderen Panel oder nach dessen Neuinitialisierung muss
+# EPOCH neu kalibriert werden.
+EPOCH = datetime(2025, 2, 20, 9, 17, 40, 371308)
 
 COLUMNS: tuple[str, ...] = (
     "Time_ms",
@@ -24,11 +34,17 @@ COLUMNS: tuple[str, ...] = (
     "MsgText",
     "PLC",
 )
+CSV_COLUMNS: tuple[str, ...] = (*COLUMNS, "Timestamp")
 TABLE_NAME = "logdata"
 
 
 class SchemaError(Exception):
     """Wird ausgelöst, wenn eine .rdb-Datei nicht das erwartete logdata-Schema hat."""
+
+
+def timestamp_to_datetime(time_ms: float) -> datetime:
+    """Konvertiert einen Time_ms-Rohwert in ein datetime-Objekt, bezogen auf EPOCH."""
+    return EPOCH + timedelta(milliseconds=time_ms)
 
 
 def find_rdb_files(folder: Path) -> list[Path]:
@@ -77,12 +93,15 @@ def merge_and_sort(rows_per_file: list[list[tuple]]) -> list[tuple]:
 
 
 def write_csv(rows: list[tuple], output_path: Path) -> None:
-    """Schreibt COLUMNS als Header + rows nach output_path (UTF-8 mit BOM)."""
+    """Schreibt CSV_COLUMNS als Header + rows (samt berechneter Timestamp-Spalte)
+    nach output_path (UTF-8 mit BOM). Time_ms bleibt unverändert als Rohwert erhalten."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(COLUMNS)
-        writer.writerows(rows)
+        writer.writerow(CSV_COLUMNS)
+        for row in rows:
+            timestamp = timestamp_to_datetime(row[0]).isoformat(sep=" ", timespec="milliseconds")
+            writer.writerow((*row, timestamp))
 
 
 def export(input_folder: Path, output_path: Path) -> int:
